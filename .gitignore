@@ -1,0 +1,6 @@
+# for binaries and auto-generated stuff
+**/build/
+
+# ignoring Haskell generated files while compiling
+*.hi
+*.o
