@@ -1,0 +1,20 @@
+{
+  "name": "@nettoclaudio/aoc-2023-d01",
+  "version": "1.0.0",
+  "description": "Day 01 puzzle solution of Advent of Code 2023",
+  "repository": "https://github.com/nettoclaudio/training",
+  "author": "Claudio Netto",
+  "license": "MIT",
+  "devDependencies": {
+    "@tsconfig/recommended": "^1.0.3",
+    "@types/node": "^20.10.4",
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint ./src",
+    "start": "yarn build && node ./dist/main.js",
+    "solve": "yarn build && node ./dist/main.js < ./src/input.txt"
+  }
+}
