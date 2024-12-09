@@ -1,9 +1,10 @@
 package main
 
 import (
-	"bufio"
+	"errors"
 	"fmt"
-	"os"
+	"io"
+	"strings"
 )
 
 func bool2int(t bool) int {
@@ -14,138 +15,112 @@ func bool2int(t bool) int {
 	return 0
 }
 
-type CrosswordCracker struct {
+type CrosswordSolver struct {
 	Board [][]byte
 }
 
-func (cc *CrosswordCracker) CountMatches(targetWord string) int {
+func (cc *CrosswordSolver) CountMatches(targetWord string) int {
 	var matches int
 	for i := 0; i < len(cc.Board); i++ {
 		for j := 0; j < len(cc.Board[i]); j++ {
-			matches += bool2int(cc.hasWordHorizontally(targetWord, i, j, false)) +
-				bool2int(cc.hasWordHorizontally(targetWord, i, j, true)) +
-				bool2int(cc.hasWordVertically(targetWord, i, j, false)) +
-				bool2int(cc.hasWordVertically(targetWord, i, j, true)) +
-				bool2int(cc.hasWordOnUpperLeftDiagonal(targetWord, i, j)) +
-				bool2int(cc.hasWordOnUpperRightDiagonal(targetWord, i, j)) +
-				bool2int(cc.hasWordOnBottomLeftDiagonal(targetWord, i, j)) +
-				bool2int(cc.hasWordOnBottomRightDiagonal(targetWord, i, j))
+			matches += 0 +
+				bool2int(cc.hasWord(targetWord, i, j, "RIGHT")) +
+				bool2int(cc.hasWord(targetWord, i, j, "LEFT")) +
+				bool2int(cc.hasWord(targetWord, i, j, "BOTTOM")) +
+				bool2int(cc.hasWord(targetWord, i, j, "TOP")) +
+				bool2int(cc.hasWord(targetWord, i, j, "TOP_LEFT")) +
+				bool2int(cc.hasWord(targetWord, i, j, "TOP_RIGHT")) +
+				bool2int(cc.hasWord(targetWord, i, j, "BOTTOM_LEFT")) +
+				bool2int(cc.hasWord(targetWord, i, j, "BOTTOM_RIGHT"))
 		}
 	}
 
 	return matches
 }
 
-func (cc *CrosswordCracker) hasWordHorizontally(targetWord string, i, j int, reverse bool) bool {
-	var found int
-	for k := j; k >= 0 && k < len(cc.Board[i]); {
-		if cc.Board[i][k] != targetWord[found] {
-			return false
-		}
+func (cc *CrosswordSolver) hasWord(target string, i, j int, direction string) bool {
+	if len(target) == 0 {
+		return true
+	}
 
-		found += 1
-		if found == len(targetWord) {
-			return true
-		}
+	if (i < 0 || i >= len(cc.Board)) || (j < 0 || j >= len(cc.Board[i])) {
+		return false
+	}
 
-		if reverse {
-			k -= 1
-		} else {
-			k += 1
+	if cc.Board[i][j] != target[0] {
+		return false
+	}
+
+	if strings.Contains(direction, "LEFT") {
+		j--
+	}
+
+	if strings.Contains(direction, "RIGHT") {
+		j++
+	}
+
+	if strings.Contains(direction, "TOP") {
+		i--
+	}
+
+	if strings.Contains(direction, "BOTTOM") {
+		i++
+	}
+
+	return cc.hasWord(target[1:], i, j, direction)
+}
+
+func (cc *CrosswordSolver) CountXMASes() int {
+	var matches int
+	for i := 0; i < len(cc.Board); i++ {
+		for j := 0; j < len(cc.Board[i]); j++ {
+			matches += bool2int(cc.isXMAS(i, j))
 		}
 	}
 
-	return false
+	return matches
 }
 
-func (cc *CrosswordCracker) hasWordVertically(targetWord string, i, j int, reverse bool) bool {
-	var found int
-	for k := i; k >= 0 && k < len(cc.Board); {
-		if cc.Board[k][j] != targetWord[found] {
-			break
-		}
-
-		found += 1
-		if found == len(targetWord) {
-			return true
-		}
-
-		if reverse {
-			k -= 1
-		} else {
-			k += 1
-		}
+func (cc *CrosswordSolver) isXMAS(i, j int) bool {
+	if c := cc.Board[i][j]; c != 'A' {
+		return false
 	}
 
-	return false
-}
-
-func (cc *CrosswordCracker) hasWordOnUpperLeftDiagonal(targetWord string, i, j int) bool {
-	return cc.hasWordOnDiagonal(targetWord, i, j, true, true)
-}
-
-func (cc *CrosswordCracker) hasWordOnUpperRightDiagonal(targetWord string, i, j int) bool {
-	return cc.hasWordOnDiagonal(targetWord, i, j, true, false)
-}
-
-func (cc *CrosswordCracker) hasWordOnBottomLeftDiagonal(targetWord string, i, j int) bool {
-	return cc.hasWordOnDiagonal(targetWord, i, j, false, true)
-}
-
-func (cc *CrosswordCracker) hasWordOnBottomRightDiagonal(targetWord string, i, j int) bool {
-	return cc.hasWordOnDiagonal(targetWord, i, j, false, false)
-}
-
-func (cc *CrosswordCracker) hasWordOnDiagonal(targetWord string, i, j int, reverseX, reverseY bool) bool {
-	var found int
-
-	for {
-		x := i
-		if reverseX {
-			x -= found
-		} else {
-			x += found
-		}
-
-		if x < 0 || x >= len(cc.Board) {
-			break
-		}
-
-		y := j
-		if reverseY {
-			y -= found
-		} else {
-			y += found
-		}
-
-		if y < 0 || y >= len(cc.Board[i]) {
-			break
-		}
-
-		if cc.Board[x][y] != targetWord[found] {
-			break
-		}
-
-		found += 1
-		if found == len(targetWord) {
-			return true
-		}
+	if (i-1) < 0 || (j-1) < 0 {
+		return false
 	}
 
-	return false
+	if (i+1) >= len(cc.Board) || (j+1) >= len(cc.Board[i]) {
+		return false
+	}
+
+	w1 := string([]byte{cc.Board[i-1][j-1], cc.Board[i][j], cc.Board[i+1][j+1]})
+	w2 := string([]byte{cc.Board[i-1][j+1], cc.Board[i][j], cc.Board[i+1][j-1]})
+
+	return (w1 == "MAS" || w1 == "SAM") && (w2 == "MAS" || w2 == "SAM")
 }
 
 func main() {
-	s := bufio.NewScanner(os.Stdin)
-	s.Split(bufio.ScanLines)
-
+	var line []byte
 	var board [][]byte
 
-	for s.Scan() {
-		board = append(board, s.Bytes())
+	for {
+		var ch byte
+		_, err := fmt.Scanf("%c", &ch)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+
+		if ch == '\n' {
+			board = append(board, line)
+			line = make([]byte, 0, len(line))
+			continue
+		}
+
+		line = append(line, ch)
 	}
 
-	cc := &CrosswordCracker{
+	cc := &CrosswordSolver{
 		Board: board,
 	}
 
@@ -154,10 +129,8 @@ func main() {
 		cc.CountMatches("XMAS"),
 	)
 
-	/*
-		fmt.Println(
-			"Second puzzle answer is:",
-			123,
-		)
-	*/
+	fmt.Println(
+		"Second puzzle answer is:",
+		cc.CountXMASes(),
+	)
 }
